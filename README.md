@@ -1,5 +1,5 @@
 # 🤖 Implementación de Cinemática Directa Simbólica (DH)
-## Control de Robots Manipuladores - Giovanni Pérez 
+## Control de Robots Manipuladores - Giovanni Pérez
 ## 1. Introducción
 
 Este proyecto tiene como objetivo implementar y verificar la **cinemática directa (Forward Kinematics)** para tres configuraciones de robots manipuladores, utilizando la convención de **Denavit-Hartenberg (DH)**. Todo el análisis se realiza de forma **simbólica** utilizando la librería Python **SymPy**, asegurando que los resultados coincidan con las ecuaciones publicadas en el libro *Control de Robots Manipuladores*.
@@ -62,4 +62,3 @@ El código produce la matriz homogénea y el Jacobiano para la configuración SC
 =======
 # Cinematicas-de-robots---Python
 Este proyecto implementa la Cinemática Directa (CD) para robots RR, RRR y SCARA usando el formalismo Denavit-Hartenberg (DH). El objetivo es verificar las ecuaciones teóricas mediante cálculo simbólico (SymPy). El código obtiene la matriz H, la posición y el Jacobiano.
->>>>>>> 8c61d488f94d2025e940bb930666fea50cc14d42
