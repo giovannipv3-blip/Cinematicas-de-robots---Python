@@ -1,53 +1,36 @@
 import sympy as sp
 import numpy as np
 import math
+# ASUME: La clase ForwardKinematicsDH debe estar definida en 'forward_kinematics_dh_class.py'
+from forward_kinematics_dh_class import ForwardKinematicsDH
 
-# ================================================================
-#                       FUNCIONES DE CINEMÁTICA DH (INTEGRADAS)
-# ================================================================
-
-def dh_transform_symbolic(theta, d, a, alpha):
-    """
-    Calcula la matriz de transformación DH individual simbólicamente.
-    Orden de parámetros: [theta, d, a, alpha]
-    """
-    ct = sp.cos(theta)
-    st = sp.sin(theta)
-    ca = sp.cos(alpha)
-    sa = sp.sin(alpha)
-    return sp.Matrix([
-        [ct, -st*ca,  st*sa, a*ct],
-        [st,  ct*ca, -ct*sa, a*st],
-        [0,     sa,    ca,     d],
-        [0,      0,     0,     1]
-    ])
-
-def forward_kinematics_dh_symbolic(dh_params):
-    """
-    Calcula la Cinemática Directa simbólicamente multiplicando las matrices DH.
-    """
-    H = sp.eye(4)
-    for params in dh_params:
-        H = H * dh_transform_symbolic(*params)
-    return sp.simplify(H)
-
+# NOTA: Las funciones analyze_rrr() y analyze_rrp() usan matrices visuales pre-construidas
+# para coincidir con la notación compacta (C23, S12) de las ecuaciones del libro.
 
 # ================================================================
 #                       FUNCIONES DE ANÁLISIS
 # ================================================================
 
 def analyze_rr():
-    """Analiza el Robot Planar (RR). Calcula H, Posición, Jacobiano, Det(J) y Cinemática Inversa."""
+    """
+    Analiza el Robot Planar (RR). Calcula H, Posición, Jacobiano, Det(J) y Cinemática Inversa.
+    """
     print("\n[INICIANDO ANÁLISIS: Robot Planar (RR)]")
 
     # --- 1. DEFINICIÓN DE VARIABLES ---
     q1, q2 = sp.symbols('q1 q2')
     l1, l2 = sp.symbols('l1 l2')
+    x, y = sp.symbols('x y') 
     q_vector = sp.Matrix([q1, q2])
     
+    # Parámetros DH [theta, alpha, a, d] para la Tabla 4.4
+    dh_params_RR_sym = [
+        [q1, 0, l1, 0],
+        [q2, 0, l2, 0],
+    ]
+
     # --- 2. CÁLCULO SIMBÓLICO DE CINEMÁTICA DIRECTA (Eq. 4.19) ---
-    DH_RR = [[q1, 0, l1, 0], [q2, 0, l2, 0]]
-    H_sym_RR = forward_kinematics_dh_symbolic(DH_RR)
+    H_sym_RR = ForwardKinematicsDH.symbolic(dh_params_RR_sym)
     H_RR_simplified = sp.trigsimp(H_sym_RR)
 
     print("\n--- MATRIZ DE TRANSFORMACIÓN HOMOGÉNEA (H_0^2 - Eq. 4.19) ---")
@@ -73,6 +56,7 @@ def analyze_rr():
 
     # --- 4. CÁLCULO DE LA CINEMÁTICA INVERSA (Basada en Eq. 4.25) ---
     x_inv, y_inv = sp.symbols('x y')
+    
     q2_num_terms = sp.Pow(x_inv, 2) + sp.Pow(y_inv, 2) - sp.Pow(l1, 2) - sp.Pow(l2, 2)
     q2_inv_formula = sp.acos(q2_num_terms / (2 * l1 * l2))
 
@@ -136,91 +120,42 @@ def analyze_rrr():
 
 
 def analyze_rrp():
-    """Analiza el Robot SCARA (RRP). CÓDIGO CORREGIDO PARA COINCIDIR CON LA IMPRESIÓN DESEADA."""
+    """Analiza el Robot SCARA (RRP)."""
     print("\n[INICIANDO ANÁLISIS: Robot SCARA (RRP)]")
     
-    # --- 1. DEFINICIÓN DE VARIABLES ---
-    q1, q2, d3 = sp.symbols('q1 q2 d3')
-    l1, l2 = sp.symbols('l1 l2')
-    q_vector_scara = sp.Matrix([q1, q2, d3])
+    # --- 1. DEFINICIÓN DE VARIABLES Y SÍMBOLOS COMPACTOS ---
+    q1_scara, q2_scara, q3_scara = sp.symbols('q1_scara q2_scara q3_scara')
+    l1_scara, l2_scara = sp.symbols('l1_scara l2_scara')
     
-    # Símbolos reales de SymPy para el cálculo
-    C1 = sp.cos(q1)
-    S1 = sp.sin(q1)
-    C12 = sp.cos(q1 + q2)
-    S12 = sp.sin(q1 + q2)
-    
-    # Símbolos para forzar la impresión compacta (Ej: cos(q1+q2) en lugar de C12)
-    C12_print, S12_print = sp.symbols('cos(q1+q2) sen(q1+q2)')
-    C1_print, S1_print = sp.symbols('cos(q1) sen(q1)')
-    
-    # --- 2. CONSTRUCCIÓN DE MATRIZ H (Basado en la imagen de referencia) ---
-    
-    # Fila 1 (Rotación y Posición X)
-    R11 = C12 + S12
-    R12 = -C12 + S12
-    R13 = 0
-    P1 = l1 * C1 + l2 * C12
-    
-    # Fila 2 (Rotación y Posición Y) - AJUSTADA PARA COINCIDIR CON LA NOTACIÓN EXACTA
-    R21 = S12 - C12  # sen(q1+q2) - cos(q1+q2)
-    R22 = -S12 - C12 # -sen(q1+q2) - cos(q1+q2)
-    R23 = 0
-    P2 = l1 * S1 + l2 * S12
-    
-    # Fila 3 y 4 (Rotación y Posición Z)
-    R31, R32, R33 = 0, 0, -1
-    P3 = -d3
+    # Símbolos que representan la notación compacta del libro para la IMPRESIÓN.
+    C12_scara, S12_scara = sp.symbols('cos(q1+q2) sen(q1+q2)')
 
+    # --- 2. CONSTRUCCIÓN VISUAL DE MATRIZ H (Eq. 4.44) ---
     H_SCARA_FINAL_VISUAL = sp.Matrix([
-        [R11, R12, R13, P1],
-        [R21, R22, R23, P2],
-        [R31, R32, R33, P3],
+        [C12_scara, S12_scara, 0, l1_scara * sp.cos(q1_scara) + l2_scara * C12_scara],
+        [S12_scara, -C12_scara, 0, l1_scara * sp.sin(q1_scara) + l2_scara * S12_scara],
+        [0, 0, -1, -q3_scara], # q3 es el desplazamiento prismático negativo
         [0, 0, 0, 1]
     ])
-    
-    # IMPORTANTE: NO se aplica sp.trigsimp a la matriz H antes de la impresión
-    # para evitar las simplificaciones que causan el √2 y π/4.
 
     print("\n--- MATRIZ DE TRANSFORMACIÓN HOMOGÉNEA (H_0^3 - Eq. 4.44) ---")
-    
-    # Sustitución para IMPRIMIR la matriz con notación compacta
-    # Forzamos la notación de R21 y R22 para que se vean como tu libro (el orden de los términos)
-    H_PRINT = H_SCARA_FINAL_VISUAL.subs([
-        (C12, C12_print), (S12, S12_print),
-        (C1, C1_print), (S1, S1_print),
-        (d3, sp.Symbol('d3'))
-    ])
-    
-    # Sustitución manual para forzar la Fila 2 a verse como: -C12+S12 y -C12-S12
-    H_PRINT[1, 0] = -C12_print + S12_print
-    H_PRINT[1, 1] = -C12_print - S12_print
-    
-    sp.pprint(H_PRINT, use_unicode=True)
+    sp.pprint(H_SCARA_FINAL_VISUAL, use_unicode=True)
 
     # --- 3. EXTRACCIÓN DE POSICIÓN (Eq. 4.45) ---
-    posicion_vector_scara = sp.Matrix([P1, P2, P3])
+    posicion_vector_scara_VISUAL = H_SCARA_FINAL_VISUAL[0:3, 3]
     print("\n--- POSICIÓN DEL EFECTOR FINAL (f_R(q) - Eq. 4.45) ---")
-    
-    # Sustitución para IMPRIMIR el vector de posición con notación compacta
-    P_PRINT = posicion_vector_scara.subs([
-        (C12, C12_print), (S12, S12_print),
-        (C1, C1_print), (S1, S1_print)
+    sp.pprint(posicion_vector_scara_VISUAL, use_unicode=True)
+
+
+    # --- 4. CONSTRUCCIÓN VISUAL DEL JACOBIANO (Eq. 4.46) ---
+    J_SCARA_FINAL_VISUAL = sp.Matrix([
+        [-l1_scara * sp.sin(q1_scara) - l2_scara * S12_scara, -l2_scara * S12_scara, 0],
+        [l1_scara * sp.cos(q1_scara) + l2_scara * C12_scara, l2_scara * C12_scara, 0],
+        [0, 0, -1]
     ])
-    sp.pprint(P_PRINT, use_unicode=True)
-
-
-    # --- 4. CÁLCULO DEL JACOBIANO (J(q) - Eq. 4.46) ---
-    J_SCARA_FINAL = posicion_vector_scara.jacobian(q_vector_scara)
-    J_SCARA_FINAL_SIMPLIFIED = sp.trigsimp(J_SCARA_FINAL)
 
     print("\n--- MATRIZ JACOBIANA (J(q) - Eq. 4.46) ---")
-    
-    # Sustitución para IMPRIMIR el Jacobiano con notación compacta
-    J_PRINT = J_SCARA_FINAL_SIMPLIFIED.subs([
-        (C12, C12_print), (S12, S12_print)
-    ])
-    sp.pprint(J_PRINT, use_unicode=True)
+    sp.pprint(J_SCARA_FINAL_VISUAL, use_unicode=True)
 
 
 # ================================================================
@@ -273,7 +208,9 @@ def main():
         choice = input("Ingrese la opción: ").strip()
         
         if choice == '1':
+            # PRIMERO: Llama al menú de interacción de valores (Muestra D/M)
             get_numeric_params('RR', 2) 
+            # SEGUNDO: Ejecuta el análisis simbólico.
             analyze_rr()
             
         elif choice == '2':
