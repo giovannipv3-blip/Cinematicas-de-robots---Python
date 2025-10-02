@@ -5,7 +5,7 @@ import math
 from forward_kinematics_dh_class import ForwardKinematicsDH
 
 # ================================================================
-#                       FUNCIONES DE ANÁLISIS
+#                       FUNCIONES DE ANÁLISIS
 # ================================================================
 
 def analyze_rr():
@@ -19,6 +19,8 @@ def analyze_rr():
     q_vector = sp.Matrix([q1, q2])
     
     # --- 2. CÁLCULO SIMBÓLICO DE CINEMÁTICA DIRECTA (Eq. 4.19) ---
+    # Asume que ForwardKinematicsDH.symbolic toma [[theta, alpha, r, d], ...]
+    # Parámetros DH típicos para RR planar: [[q1, 0, l1, 0], [q2, 0, l2, 0]]
     H_sym_RR = ForwardKinematicsDH.symbolic([[q1, 0, l1, 0], [q2, 0, l2, 0]])
     H_RR_simplified = sp.trigsimp(H_sym_RR)
 
@@ -51,6 +53,7 @@ def analyze_rr():
     print("\n--- CINEMÁTICA INVERSA q2 (Ejemplo de salida simbólica) ---")
     sp.pprint(sp.Eq(sp.Symbol('q2'), q2_inv_formula), use_unicode=True)
 
+    # Nota: Esta es una forma del CI. La versión general requiere atan2.
     q1_inv_formula = sp.atan(y_inv/x_inv) - sp.atan((l2 * sp.sin(q2)) / (l1 + l2 * sp.cos(q2))) + sp.pi/2
 
     print("\n--- CINEMÁTICA INVERSA q1 (Ejemplo de salida simbólica) ---")
@@ -117,11 +120,14 @@ def analyze_rrp():
     
     # Símbolos que representan la notación compacta del libro para la IMPRESIÓN.
     C12_scara, S12_scara = sp.symbols('cos(q1+q2) sen(q1+q2)')
+    
+    # NOTA DE CORRECCIÓN: La matriz H se ha corregido para coincidir con la Eq. 4.44
+    # La columna 2 (eje y_3) debe ser [-S12, C12, 0]^T.
 
     # --- 2. CONSTRUCCIÓN VISUAL DE MATRIZ H (Eq. 4.44) ---
     H_SCARA_FINAL_VISUAL = sp.Matrix([
-        [C12_scara, S12_scara, 0, l1_scara * sp.cos(q1_scara) + l2_scara * C12_scara],
-        [S12_scara, -C12_scara, 0, l1_scara * sp.sin(q1_scara) + l2_scara * S12_scara],
+        [C12_scara, -S12_scara, 0, l1_scara * sp.cos(q1_scara) + l2_scara * C12_scara],
+        [S12_scara, C12_scara, 0, l1_scara * sp.sin(q1_scara) + l2_scara * S12_scara],
         [0, 0, -1, -q3_scara], # q3 es el desplazamiento prismático negativo
         [0, 0, 0, 1]
     ])
@@ -136,6 +142,7 @@ def analyze_rrp():
 
 
     # --- 4. CONSTRUCCIÓN VISUAL DEL JACOBIANO (Eq. 4.46) ---
+    # Este Jacobiano se deriva correctamente del vector de posición (Eq. 4.45)
     J_SCARA_FINAL_VISUAL = sp.Matrix([
         [-l1_scara * sp.sin(q1_scara) - l2_scara * S12_scara, -l2_scara * S12_scara, 0],
         [l1_scara * sp.cos(q1_scara) + l2_scara * C12_scara, l2_scara * C12_scara, 0],
@@ -147,7 +154,7 @@ def analyze_rrp():
 
 
 # ================================================================
-#                       FUNCIÓN DE CONFIGURACIÓN Y MENÚ
+#                       FUNCIÓN DE CONFIGURACIÓN Y MENÚ
 # ================================================================
 
 def get_numeric_params(robot_name, num_params):
@@ -196,9 +203,7 @@ def main():
         choice = input("Ingrese la opción: ").strip()
         
         if choice == '1':
-            # PRIMERO: Llamar al menú de interacción de valores (Muestra D/M)
             get_numeric_params('RR', 2) 
-            # SEGUNDO: Ejecutar el análisis simbólico.
             analyze_rr()
             
         elif choice == '2':
