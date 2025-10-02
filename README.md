@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # 🤖 Implementación de Cinemática Directa Simbólica (DH)
 ## Control de Robots Manipuladores - [TU NOMBRE COMPLETO]
 ## 1. Introducción
@@ -59,3 +60,7 @@ La implementación genera la matriz homogénea 3D y su Jacobiano, confirmando la
 El código produce la matriz homogénea y el Jacobiano para la configuración SCARA, coincidiendo con la **Ecuación 4.44** ($H_0^3$) y la **Ecuación 4.46** (Jacobiano), que incluye la inversión en el eje $Z$.
 
 ![Captura de pantalla de la salida simbólica del Robot SCARA (RRP)](Assets/RRP.png)
+=======
+# Cinematicas-de-robots---Python
+Este proyecto implementa la Cinemática Directa (CD) para robots RR, RRR y SCARA usando el formalismo Denavit-Hartenberg (DH). El objetivo es verificar las ecuaciones teóricas mediante cálculo simbólico (SymPy). El código obtiene la matriz H, la posición y el Jacobiano.
+>>>>>>> 8c61d488f94d2025e940bb930666fea50cc14d42
