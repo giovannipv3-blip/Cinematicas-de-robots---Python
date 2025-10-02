@@ -62,4 +62,3 @@ El código produce la matriz homogénea y el Jacobiano para la configuración SC
 =======
 # Cinematicas-de-robots---Python
 Este proyecto implementa la Cinemática Directa (CD) para robots RR, RRR y SCARA usando el formalismo Denavit-Hartenberg (DH). El objetivo es verificar las ecuaciones teóricas mediante cálculo simbólico (SymPy). El código obtiene la matriz H, la posición y el Jacobiano.
->>>>>>> 8c61d488f94d2025e940bb930666fea50cc14d42
