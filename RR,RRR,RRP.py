@@ -13,6 +13,37 @@ PARAM_COUNTS = {
 }
 
 # ================================================================
+#       FUNCIÓN PARA INGRESAR MATRIZ INICIAL
+# ================================================================
+
+def get_initial_matrix():
+    """
+    Permite al usuario ingresar manualmente la matriz homogénea inicial (4x4) o usar la identidad por defecto.
+    """
+    print("\n--- Configuración de la Matriz Inicial ---")
+    choice = input("¿Desea ingresar manualmente la matriz inicial? [S/N]: ").strip().upper()
+    if choice != 'S':
+        print("Usando la matriz identidad por defecto.")
+        return sp.eye(4)
+    
+    print("Ingrese los 16 valores de la matriz 4x4, fila por fila, separados por espacios:")
+    values = []
+    while len(values) < 16:
+        fila = input(f"Fila {len(values)//4 + 1}: ").strip().split()
+        try:
+            fila_vals = [float(x) for x in fila]
+            if len(fila_vals) != 4:
+                print("Debe ingresar exactamente 4 valores por fila.")
+                continue
+            values.extend(fila_vals)
+        except ValueError:
+            print("Entrada inválida. Intente de nuevo.")
+    matriz = sp.Matrix(4, 4, values)
+    print("Matriz inicial ingresada:")
+    sp.pprint(matriz, use_unicode=True)
+    return matriz
+
+# ================================================================
 #       FUNCIONES AUXILIARES DE CÁLCULO
 # ================================================================
 
@@ -85,7 +116,7 @@ def _perform_numerical_calc(robot_name, P_sym, J_sym, l_values, q_values):
 #       FUNCIONES DE ANÁLISIS
 # ================================================================
 
-def analyze_rr(l_values=None, q_values=None, perform_numeric=False):
+def analyze_rr(l_values=None, q_values=None, perform_numeric=False, matriz_inicial=None):
     """Analiza el Robot Planar (RR). Calcula H, Posición, Jacobiano y el valor NUMÉRICO."""
     print("\n[INICIANDO ANÁLISIS: Robot Planar (RR)]")
 
@@ -99,6 +130,8 @@ def analyze_rr(l_values=None, q_values=None, perform_numeric=False):
 
     # CÁLCULO SIMBÓLICO
     H_sym_RR = ForwardKinematicsDH.symbolic(dh_params_RR_sym)
+    if matriz_inicial is not None:
+        H_sym_RR = matriz_inicial * H_sym_RR
     H_RR_simplified = sp.trigsimp(H_sym_RR)
     
     x_fwd = sp.trigsimp(H_RR_simplified[0, 3])
@@ -117,38 +150,33 @@ def analyze_rr(l_values=None, q_values=None, perform_numeric=False):
     if perform_numeric:
         _perform_numerical_calc('RR', posicion_vector, J_RR_simplified, l_values, q_values)
     
-    # El resto del código simbólico de cinemática inversa se mantiene sin cambios
-    # ...
 
-
-def analyze_rrr(l_values=None, q_values=None, perform_numeric=False):
+def analyze_rrr(l_values=None, q_values=None, perform_numeric=False, matriz_inicial=None):
     """Analiza el Robot Antropomórfico (RRR) y calcula el valor NUMÉRICO."""
     print("\n[INICIANDO ANÁLISIS: Robot Antropomórfico (RRR)]")
     
     q1, q2, q3 = sp.symbols('q1 q2 q3')
     l1, l2, l3 = sp.symbols('l1 l2 l3')
     
-    # Símbolos que representan la notación compacta del libro para la IMPRESIÓN.
     C1, S1 = sp.symbols('cos(q1) sen(q1)')
     C2, S2 = sp.symbols('cos(q2) sen(q2)')
     C23, S23 = sp.symbols('cos(q2+q3) sen(q2+q3)') 
 
-    # --- 2. CONSTRUCCIÓN VISUAL DE MATRIZ H (Eq. 4.29) ---
     H_RRR_FINAL_VISUAL = sp.Matrix([
         [C1 * C23, -C1 * S23, S1, C1 * (l2 * C2 + l3 * C23)], 
         [S1 * C23, -S1 * S23, -C1, S1 * (l2 * C2 + l3 * C23)], 
         [S23, C23, 0, l1 + l2 * S2 + l3 * S23],
         [0, 0, 0, 1]
     ])
+    if matriz_inicial is not None:
+        H_RRR_FINAL_VISUAL = matriz_inicial * H_RRR_FINAL_VISUAL
     print("\n--- MATRIZ DE TRANSFORMACIÓN HOMOGÉNEA VISUAL (H_0^3 - Eq. 4.29) ---")
     sp.pprint(H_RRR_FINAL_VISUAL, use_unicode=True)
 
-    # --- 3. EXTRACCIÓN DE POSICIÓN (Eq. 4.30) ---
     posicion_vector_r3_VISUAL = H_RRR_FINAL_VISUAL[0:3, 3]
     print("\n--- POSICIÓN SIMBÓLICA VISUAL (f_R(q) - Eq. 4.30) ---")
     sp.pprint(posicion_vector_r3_VISUAL, use_unicode=True)
 
-    # --- 4. CONSTRUCCIÓN VISUAL DEL JACOBIANO (Eq. 4.38) ---
     J_RRR_FINAL_VISUAL = sp.Matrix([
         [-S1 * (l2 * C2 + l3 * C23), -C1 * (l2 * S2 + l3 * S23), -l3 * C1 * S23],
         [C1 * (l2 * C2 + l3 * C23), -S1 * (l2 * S2 + l3 * S23), -l3 * S1 * S23],
@@ -157,37 +185,34 @@ def analyze_rrr(l_values=None, q_values=None, perform_numeric=False):
     print("\n--- MATRIZ JACOBIANA VISUAL (J(q) - Eq. 4.38) ---")
     sp.pprint(J_RRR_FINAL_VISUAL, use_unicode=True)
     
-    # CÁLCULO NUMÉRICO CONDICIONAL
     if perform_numeric:
         _perform_numerical_calc('RRR', posicion_vector_r3_VISUAL, J_RRR_FINAL_VISUAL, l_values, q_values)
 
 
-def analyze_rrp(l_values=None, q_values=None, perform_numeric=False):
+def analyze_rrp(l_values=None, q_values=None, perform_numeric=False, matriz_inicial=None):
     """Analiza el Robot SCARA (RRP) y calcula el valor NUMÉRICO."""
     print("\n[INICIANDO ANÁLISIS: Robot SCARA (RRP)]")
     
-    # Se usan los nombres genéricos q1, l1 para compatibilidad con la función de cálculo numérico
     q1, q2, q3 = sp.symbols('q1 q2 q3')
     l1, l2 = sp.symbols('l1 l2')
     
     C12, S12 = sp.symbols('cos(q1+q2) sen(q1+q2)')
 
-    # --- 2. CONSTRUCCIÓN VISUAL DE MATRIZ H (Eq. 4.44) ---
     H_SCARA_FINAL_VISUAL = sp.Matrix([
         [C12, S12, 0, l1 * sp.cos(q1) + l2 * C12],
         [S12, -C12, 0, l1 * sp.sin(q1) + l2 * S12],
-        [0, 0, -1, -q3], # q3 es el desplazamiento prismático negativo
+        [0, 0, -1, -q3],
         [0, 0, 0, 1]
     ])
+    if matriz_inicial is not None:
+        H_SCARA_FINAL_VISUAL = matriz_inicial * H_SCARA_FINAL_VISUAL
     print("\n--- MATRIZ DE TRANSFORMACIÓN HOMOGÉNEA VISUAL (H_0^3 - Eq. 4.44) ---")
     sp.pprint(H_SCARA_FINAL_VISUAL, use_unicode=True)
 
-    # --- 3. EXTRACCIÓN DE POSICIÓN (Eq. 4.45) ---
     posicion_vector_scara_VISUAL = H_SCARA_FINAL_VISUAL[0:3, 3]
     print("\n--- POSICIÓN SIMBÓLICA VISUAL (f_R(q) - Eq. 4.45) ---")
     sp.pprint(posicion_vector_scara_VISUAL, use_unicode=True)
 
-    # --- 4. CONSTRUCCIÓN VISUAL DEL JACOBIANO (Eq. 4.46) ---
     J_SCARA_FINAL_VISUAL = sp.Matrix([
         [-l1 * sp.sin(q1) - l2 * S12, -l2 * S12, 0],
         [l1 * sp.cos(q1) + l2 * C12, l2 * C12, 0],
@@ -196,10 +221,8 @@ def analyze_rrp(l_values=None, q_values=None, perform_numeric=False):
     print("\n--- MATRIZ JACOBIANA VISUAL (J(q) - Eq. 4.46) ---")
     sp.pprint(J_SCARA_FINAL_VISUAL, use_unicode=True)
     
-    # CÁLCULO NUMÉRICO CONDICIONAL
     if perform_numeric:
         _perform_numerical_calc('RRP', posicion_vector_scara_VISUAL, J_SCARA_FINAL_VISUAL, l_values, q_values)
-
 
 # ================================================================
 #       FUNCIÓN DE CONFIGURACIÓN Y MENÚ
@@ -227,7 +250,6 @@ def get_numeric_params(robot_name):
         perform_numeric_calc = True
     else:
         print("Continuando solo con el cálculo simbólico...")
-        # Retorna valores vacíos, el programa principal lo manejará
         return {}, {}, False 
 
     # --- 2. Obtener Longitudes (l_i) (Solo si se eligió cálculo numérico) ---
@@ -254,13 +276,10 @@ def get_numeric_params(robot_name):
         joint_name = f'q{i + 1}'
         while True:
             try:
-                # Para la junta prismática (q3 en RRP), se pide el desplazamiento en unidades de longitud.
                 if robot_name == 'RRP' and i == 2:
                     val = float(input(f"Valor de {joint_name} (desplazamiento lineal): "))
                     q_values[joint_name] = val
                     break
-                
-                # Para juntas de revolución, se pide en grados y se convierte a radianes.
                 val_grados = float(input(f"Valor de {joint_name} (en grados): "))
                 q_values[joint_name] = math.radians(val_grados)
                 break
@@ -272,7 +291,6 @@ def get_numeric_params(robot_name):
 
 def main():
     """Menú principal para seleccionar el análisis del robot."""
-    
     while True:
         print("\n" + "="*70)
         print("SISTEMA DE ANÁLISIS DE CINEMÁTICA DE ROBOTS (Simbólico + Numérico)")
@@ -285,20 +303,20 @@ def main():
         
         choice = input("Ingrese la opción: ").strip()
         
+        if choice in ['1', '2', '3']:
+            matriz_inicial = get_initial_matrix()
+        
         if choice == '1':
-            # Se recibe la nueva bandera booleana
             l_num, q_num, do_calc = get_numeric_params('RR') 
-            analyze_rr(l_values=l_num, q_values=q_num, perform_numeric=do_calc)
+            analyze_rr(l_values=l_num, q_values=q_num, perform_numeric=do_calc, matriz_inicial=matriz_inicial)
             
         elif choice == '2':
-            # Se recibe la nueva bandera booleana
             l_num, q_num, do_calc = get_numeric_params('RRR')
-            analyze_rrr(l_values=l_num, q_values=q_num, perform_numeric=do_calc)
+            analyze_rrr(l_values=l_num, q_values=q_num, perform_numeric=do_calc, matriz_inicial=matriz_inicial)
             
         elif choice == '3':
-            # Se recibe la nueva bandera booleana
             l_num, q_num, do_calc = get_numeric_params('RRP')
-            analyze_rrp(l_values=l_num, q_values=q_num, perform_numeric=do_calc)
+            analyze_rrp(l_values=l_num, q_values=q_num, perform_numeric=do_calc, matriz_inicial=matriz_inicial)
             
         elif choice == '0':
             print("Saliendo del programa. ¡Hasta pronto!")
